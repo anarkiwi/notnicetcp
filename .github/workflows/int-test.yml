@@ -7,10 +7,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - name: integration-tests
+    - name: integration tests
       run: |
+        export DEBIAN_FRONTEND=noninteractive && \
+        echo 'debconf debconf/frontend select Noninteractive' | sudo debconf-set-selections
         sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4052245BD4284CDD && \
         echo "deb https://repo.iovisor.org/apt/$(lsb_release -cs) $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/iovisor.list && \
         sudo apt-get update && \
         sudo apt-get install bcc-tools libbcc-examples linux-headers-$(uname -r) python3-bcc && \
-        sudo ./notnicetcp.py
+        sudo ./notnicetcp.py --no-attach

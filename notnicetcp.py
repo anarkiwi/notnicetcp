@@ -3,7 +3,7 @@
 from bcc import BPF
 import time
 
-device = "copro0"
+device = "lo"
 print('initializing')
 b = BPF(src_file='notnicetcp.c')
 fn = b.load_func('notnicetcp', BPF.XDP)

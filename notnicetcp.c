@@ -1,3 +1,8 @@
+#ifdef asm_inline
+#undef asm_inline
+#define asm_inline asm
+#endif
+
 #define KBUILD_MODNAME "notnicetcp"
 #include <linux/bpf.h>
 #include <linux/if_ether.h>

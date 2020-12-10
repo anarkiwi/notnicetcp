@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import argparse
+import subprocess
 from bcc import BPF
 
 parser = argparse.ArgumentParser(description='notnicetcp')
@@ -16,8 +17,12 @@ fn = b.load_func('notnicetcp', BPF.XDP)
 print('loaded')
 if args.attach:
     b.attach_xdp(args.device, fn, 0)
+    # Need promisc as might receive packet with eth_dst not to us.
+    subprocess.check_call(['ip', 'link', 'set', args.device, 'promisc', 'on'])
     print('attached')
     try:
         b.trace_print()
     except KeyboardInterrupt:
         pass
+    subprocess.check_call(['ip', 'link', 'set', args.device, 'promisc', 'off'])
+    b.remove_xdp(args.device, 0)

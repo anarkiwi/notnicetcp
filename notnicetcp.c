@@ -1,3 +1,4 @@
+// TODO: remove workaround necessary for GitHub Actions/bcc Dec 2020
 #ifdef asm_inline
 #undef asm_inline
 #define asm_inline asm
@@ -12,19 +13,19 @@
 
 
 int notnicetcp(struct xdp_md *ctx) {
-  void *data = (void *)(long)ctx->data;
-  void *data_end = (void *)(long)ctx->data_end;
+  void *data = (void*)(long)ctx->data;
+  void *data_end = (void*)(long)ctx->data_end;
   // TODO: handle VLAN
   struct ethhdr *eth = data;
-  if ((void*)eth + sizeof(*eth) <= data_end) {
+  if ((void*)eth + sizeof(*eth) + sizeof(struct iphdr) <= data_end) {
     struct iphdr *ip = data + sizeof(*eth);
-    const u32 opts_size = 12; // TODO
-    if ((void*)ip + sizeof(*ip) + sizeof(struct tcphdr) + opts_size + 8 <= data_end) {
-      unsigned int tot_len = ntohs(ip->tot_len);
-      // Look for a get, and maybe break the URL.
-      if (ip->protocol == IPPROTO_TCP && tot_len > 52) {
-        struct tcphdr *tcp = (void*)ip + sizeof(*ip);
-	unsigned char *payload = (void*)tcp + sizeof(*tcp) + opts_size;
+    u16 tot_len = ntohs(ip->tot_len);
+    if (ip->protocol == IPPROTO_TCP && (void*)ip + sizeof(*ip) + sizeof(struct tcphdr) <= data_end) {
+      struct tcphdr *tcp = (void*)ip + sizeof(*ip);
+      u16 tcp_header_size = tcp->doff << 2;
+      // Look for a GET, and maybe break the URL.
+      if ((void*)tcp + tcp_header_size + 8 <= data_end && tot_len > 52) {
+	unsigned char *payload = (void*)tcp + tcp_header_size;
 	if (payload[0] == 'G' && payload[1] == 'E' && payload[2] == 'T') {
           bpf_trace_printk("got a GET\n");
 	  u32 dice = bpf_get_prandom_u32();

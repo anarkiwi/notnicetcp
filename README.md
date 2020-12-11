@@ -13,6 +13,6 @@ This eBPF program will hairpin TCP back into FAUCET's pipeline, only worse
 to randomly break payload in any packet).
 
     sudo apt-get install bpfcc-tools python3-bpfcc
-    sudo ./notsonice.py --device=copro0
+    sudo ./notnicetcp.py --device=copro0
 
 ![alt text](notnicecopro.jpg)

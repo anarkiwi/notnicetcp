@@ -15,7 +15,7 @@ print('initializing')
 b = BPF(src_file='notnicetcp.c')
 fn = b.load_func('notnicetcp', BPF.XDP)
 if args.attach:
-    print(attaching to %s' % args.device)
+    print('attaching to %s' % args.device)
     b.attach_xdp(args.device, fn, 0)
     # Need promisc as might receive packet with eth_dst not to us.
     subprocess.check_call(['ip', 'link', 'set', args.device, 'promisc', 'on'])

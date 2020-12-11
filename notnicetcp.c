@@ -30,26 +30,34 @@ static __always_inline struct iphdr *parseip(void *data, void *data_end) {
   }
   return NULL;
 }
+
+static __always_inline unsigned char *tcppayload(struct iphdr *ip, void *data_end, u16 min_ip, u16 min_tcp) {
+  if (ip->protocol == IPPROTO_TCP && (void*)ip + sizeof(*ip) + sizeof(struct tcphdr) <= data_end) {
+    struct tcphdr *tcp = (void*)ip + sizeof(*ip);
+    u16 tcp_header_size = tcp->doff << 2;
+    u16 tot_len = ntohs(ip->tot_len);
+    // Look for a GET, and maybe break the URL.
+    if ((void*)tcp + tcp_header_size + min_tcp <= data_end && tot_len >= min_ip) {
+      return (void*)tcp + tcp_header_size;
+    }
+  }
+  return NULL;
+}
   
 int notnicetcp(struct xdp_md *ctx) {
   void *data = (void*)(long)ctx->data;
   void *data_end = (void*)(long)ctx->data_end;
   struct iphdr *ip = parseip(data, data_end);
   if (ip) {
-    if (ip->protocol == IPPROTO_TCP && (void*)ip + sizeof(*ip) + sizeof(struct tcphdr) <= data_end) {
-      struct tcphdr *tcp = (void*)ip + sizeof(*ip);
-      u16 tcp_header_size = tcp->doff << 2;
-      u16 tot_len = ntohs(ip->tot_len);
-      // Look for a GET, and maybe break the URL.
-      if ((void*)tcp + tcp_header_size + 8 <= data_end && tot_len > 52) {
-        unsigned char *payload = (void*)tcp + tcp_header_size;
-        if (payload[0] == 'G' && payload[1] == 'E' && payload[2] == 'T') {
-          bpf_trace_printk("got a GET\n");
-          u32 dice = bpf_get_prandom_u32();
-          if (dice > 2147483648) {
-            payload[4] = dice & 255;
-            bpf_trace_printk("broke the GET\n");
-          }
+    unsigned char *payload = tcppayload(ip, data_end, 52, 5);
+    // Look for a GET, and maybe break the URL.
+    if (payload) {
+      if (payload[0] == 'G' && payload[1] == 'E' && payload[2] == 'T') {
+        bpf_trace_printk("got a GET\n");
+        u32 dice = bpf_get_prandom_u32();
+        if (dice > 2147483648) {
+          payload[4] = dice & 255;
+          bpf_trace_printk("broke the GET\n");
         }
       }
     }
